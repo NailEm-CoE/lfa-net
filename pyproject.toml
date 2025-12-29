@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "NailEm-CoE", email = "nailem@example.com"},
+    {name = "NailEm-CoE"},
 ]
 keywords = ["deep-learning", "pytorch", "medical-imaging", "retinal-vessel-segmentation", "semantic-segmentation"]
 classifiers = [
@@ -24,11 +24,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
-
-[project.urls]
-Homepage = "https://github.com/NailEm-CoE/lfa-net"
-Repository = "https://github.com/NailEm-CoE/lfa-net"
-Issues = "https://github.com/NailEm-CoE/lfa-net/issues"
 dependencies = [
     "torch>=2.0",
     "torchvision",
@@ -39,23 +34,18 @@ dependencies = [
     "pillow",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff",
-    "pytest",
-]
-hydra = [
-    "hydra-core>=1.3",
-    "omegaconf",
-]
-optuna = [
-    "optuna",
-    "optuna-integration[pytorch_lightning]",
-    "optuna-dashboard",
-]
+[project.urls]
+Homepage = "https://github.com/NailEm-CoE/lfa-net"
+Repository = "https://github.com/NailEm-CoE/lfa-net"
+Issues = "https://github.com/NailEm-CoE/lfa-net/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+hydra = ["hydra-core>=1.3", "omegaconf"]
+
+[tool.setuptools]
+packages = ["lfa_net", "lfa_net.data", "lfa_net.models", "lfa_net.config"]
+package-data = {"lfa_net" = ["config/**/*.yaml"]}
 
 [tool.ruff]
 line-length = 100
