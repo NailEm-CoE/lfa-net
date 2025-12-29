@@ -1,0 +1,19 @@
+# Deep 5-level model (for very high resolution or complex structures)
+
+name: lfa_net
+in_channels: 3
+out_channels: 1
+
+# Deep architecture: 5 encoder levels
+encoder_filters: [8, 16, 32, 64, 128]
+bottleneck_filters: 128
+
+# Attention parameters
+dropout: 0.5
+ra_k: 16
+focal_gamma: 2.0
+focal_alpha: 0.25
+
+# Loss weights
+bce_weight: 0.5
+dice_weight: 0.5

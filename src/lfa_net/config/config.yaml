@@ -1,0 +1,24 @@
+# LFA-Net Hydra Configuration
+# Main config that composes model, data, and training configs
+
+defaults:
+  - model: lfa_net
+  - data: fundus
+  - train: default
+  - _self_
+
+# Experiment metadata
+experiment:
+  name: lfa-net
+  seed: 42
+
+# Output paths (relative to Hydra output dir)
+paths:
+  output_dir: outputs
+  checkpoints: ${paths.output_dir}/checkpoints
+  logs: ${paths.output_dir}/logs
+
+hydra:
+  output_subdir: .hydra
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

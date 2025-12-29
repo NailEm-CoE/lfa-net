@@ -1,0 +1,87 @@
+"""LFA-Net: Local Feature Aggregation Network for retinal vessel segmentation.
+
+This package provides a PyTorch implementation of LFA-Net for medical image
+segmentation, specifically designed for retinal vessel segmentation tasks.
+
+Example:
+    >>> from lfa_net import LFANet, LFANetLightning
+    >>> from lfa_net.data import HFVesselDataModule
+    >>> 
+    >>> # Create model
+    >>> model = LFANet()
+    >>> 
+    >>> # Or use Lightning wrapper for training
+    >>> lit_model = LFANetLightning(learning_rate=1e-3)
+    >>>
+    >>> # Flexible architecture with Hydra config
+    >>> from lfa_net import FlexibleLFANet, FlexibleLFANetLightning
+    >>> model = FlexibleLFANet(encoder_filters=[16, 32, 64, 128])
+    >>>
+    >>> # Latent skip architecture (uniform skip projections)
+    >>> from lfa_net import LatentSkipLFANet
+    >>> model = LatentSkipLFANet(encoder_channels=[32, 48, 72, 144])
+    >>>
+    >>> # Multi-class artery/vein segmentation
+    >>> from lfa_net import MulticlassLFANetLightning
+    >>> from lfa_net.data import AVVesselDataModule
+"""
+
+from .layers import (
+    ContextAggregation,
+    FocalModulation,
+    LiteFusionAttention,
+    MultiScaleConvBlock,
+    RAAttentionBlock,
+    SEMAttentionBlock,
+    VisionMambaInspired,
+)
+from .lightning_module import (
+    FlexibleLFANetLightning,
+    LatentSkipLFANetLightning,
+    LFANetLightning,
+    MulticlassLFANetLightning,
+)
+from .losses import (
+    BCEDiceLoss,
+    MulticlassBCEDiceLoss,
+    bce_dice_loss,
+    dice_loss,
+    multiclass_bce_dice_loss,
+    multiclass_dice_loss,
+    per_class_dice,
+)
+from .metrics import get_metrics
+from .model import FlexibleLFANet, LFANet, count_parameters
+from .models import LatentSkipLFANet
+
+__version__ = "0.3.0"
+
+__all__ = [
+    # Model
+    "LFANet",
+    "FlexibleLFANet",
+    "LatentSkipLFANet",
+    "LFANetLightning",
+    "FlexibleLFANetLightning",
+    "MulticlassLFANetLightning",
+    "LatentSkipLFANetLightning",
+    "count_parameters",
+    # Layers
+    "MultiScaleConvBlock",
+    "FocalModulation",
+    "ContextAggregation",
+    "VisionMambaInspired",
+    "LiteFusionAttention",
+    "RAAttentionBlock",
+    "SEMAttentionBlock",
+    # Losses
+    "dice_loss",
+    "bce_dice_loss",
+    "BCEDiceLoss",
+    "multiclass_dice_loss",
+    "multiclass_bce_dice_loss",
+    "per_class_dice",
+    "MulticlassBCEDiceLoss",
+    # Metrics
+    "get_metrics",
+]

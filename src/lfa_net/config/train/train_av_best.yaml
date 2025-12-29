@@ -1,0 +1,31 @@
+# AV Best Training Configuration (from Optuna tuning)
+# Trial 11 - optimized for Artery/Vein segmentation
+
+max_epochs: 200
+learning_rate: 0.00075
+optimizer: adamw
+weight_decay: 7.2929e-05
+
+# Gradient settings
+gradient_clip_val: 1.0
+accumulate_grad_batches: 1
+
+# Precision
+precision: "16-mixed"
+
+# Early stopping
+early_stopping:
+  monitor: val/avg_dice
+  mode: max
+  patience: 30
+  min_delta: 0.001
+
+# Checkpointing
+checkpoint:
+  monitor: val/avg_dice
+  mode: max
+  save_top_k: 3
+  save_last: true
+
+# Logging
+log_every_n_steps: 10

@@ -1,0 +1,19 @@
+# Fundus Vessel Dataset Configuration
+
+dataset_path: data/fundus_vessels/dataset
+image_size: 512
+batch_size: 8
+num_workers: 4
+augment: true
+
+# Augmentation parameters
+augmentation:
+  random_crop_scale: [0.8, 1.0]
+  hflip: true
+  vflip: true
+  rotation_degrees: 15
+  color_jitter:
+    brightness: 0.1
+    contrast: 0.1
+    saturation: 0.1
+  gaussian_noise_std: 0.02

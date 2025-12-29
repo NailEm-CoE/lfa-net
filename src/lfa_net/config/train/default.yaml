@@ -1,0 +1,31 @@
+# Default Training Configuration
+
+max_epochs: 200
+learning_rate: 1e-4
+optimizer: adam
+weight_decay: 0.0
+
+# Gradient settings
+gradient_clip_val: 1.0
+accumulate_grad_batches: 1
+
+# Precision
+precision: "16-mixed"
+
+# Early stopping
+early_stopping:
+  monitor: val/dice
+  mode: max
+  patience: 30
+  min_delta: 0.001
+
+# Checkpointing
+checkpoint:
+  monitor: val/dice
+  mode: max
+  save_top_k: 3
+  save_last: true
+
+# Logging
+log_every_n_steps: 10
+log_val_image_n_epoch: 3  # Log validation images every N epochs

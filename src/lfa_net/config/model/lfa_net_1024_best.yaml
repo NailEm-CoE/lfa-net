@@ -1,0 +1,17 @@
+model:
+  name: lfa_net
+  in_channels: 3
+  out_channels: 1
+  filters: 32
+  feature_scale: 2
+  dropout: 0.6
+  ra_k: 8
+  focal_gamma: 2.0
+  focal_alpha: 0.5
+train:
+  learning_rate: 0.00012486247422543073
+  accumulate_grad_batches: 2
+_optuna:
+  trial_number: 0
+  best_value: 0.6284137964248657
+  n_trials: 1

@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lfa-net"
+version = "0.3.0"
+description = "LFA-Net: Local Feature Aggregation Network for retinal vessel segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "NailEm-CoE", email = "nailem@example.com"},
+]
+keywords = ["deep-learning", "pytorch", "medical-imaging", "retinal-vessel-segmentation", "semantic-segmentation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+[project.urls]
+Homepage = "https://github.com/NailEm-CoE/lfa-net"
+Repository = "https://github.com/NailEm-CoE/lfa-net"
+Issues = "https://github.com/NailEm-CoE/lfa-net/issues"
+dependencies = [
+    "torch>=2.0",
+    "torchvision",
+    "pytorch-lightning>=2.0",
+    "torchmetrics",
+    "kornia",
+    "datasets",
+    "pillow",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
+hydra = [
+    "hydra-core>=1.3",
+    "omegaconf",
+]
+optuna = [
+    "optuna",
+    "optuna-integration[pytorch_lightning]",
+    "optuna-dashboard",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]

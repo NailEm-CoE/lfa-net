@@ -1,0 +1,19 @@
+# Light model for fast inference
+
+name: lfa_net
+in_channels: 3
+out_channels: 1
+
+# Minimal architecture
+encoder_filters: [8, 16, 32]
+bottleneck_filters: 32
+
+# Attention parameters  
+dropout: 0.3
+ra_k: 8
+focal_gamma: 2.0
+focal_alpha: 0.25
+
+# Loss weights
+bce_weight: 0.5
+dice_weight: 0.5

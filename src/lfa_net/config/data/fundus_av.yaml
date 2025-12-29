@@ -1,0 +1,26 @@
+# Artery/Vein multi-class dataset configuration
+# Configured for 1024x1024 input
+
+dataset_path: data/fundus_vessels/dataset
+image_size: 1024
+batch_size: 16
+num_workers: 8
+augment: true
+
+# Multi-class specific
+num_classes: 2  # artery, vein (background is implicit)
+class_names:
+  - artery
+  - vein
+
+# Augmentation parameters
+augmentation:
+  random_crop_scale: [0.75, 1.0]
+  hflip: true
+  vflip: true
+  rotation_degrees: 15
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+  gaussian_noise_std: 0.05

@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Training outputs (large files)
+research/outputs/checkpoints/
+research/outputs/logs/
+research/outputs/figures/
+
+# Dataset cache (large files)
+/data/
+
+# Temporary files
+*.tmp
+*.bak
+.ruff_cache/
+
+/outputs/

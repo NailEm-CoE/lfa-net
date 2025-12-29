@@ -1,0 +1,13 @@
+# LFA-Net AV Best Config (from Optuna tuning)
+# Trial 11 - best_value: 0.7671
+
+# Model architecture
+in_channels: 3
+out_channels: 2
+encoder_filters: [32, 48, 72, 144]
+dropout: 0.6
+ra_k: 32
+focal_gamma: 1.5
+focal_alpha: 0.3
+bce_weight: 0.4
+dice_weight: 0.6

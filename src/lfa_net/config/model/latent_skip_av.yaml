@@ -1,0 +1,22 @@
+# LatentSkipLFANet for Artery/Vein segmentation (2-class output)
+# Configured for 1024x1024 input with latent skip connections
+
+name: latent_skip_lfa_net
+in_channels: 3
+out_channels: 2  # artery and vein channels
+
+# Latent skip architecture (1.92M params with default)
+encoder_channels: [32, 48, 72, 144]
+decoder_channels: null  # auto-derived from encoder
+
+# Latent skip connection parameters
+latent_channels: 8
+skip_spatial: 64  # Larger for 1024x1024 input
+
+# Attention parameters  
+dropout: 0.1
+n_classes: 2  # For RAA attention
+
+# Loss weights
+bce_weight: 0.5
+dice_weight: 0.5

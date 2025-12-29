@@ -1,0 +1,30 @@
+# Training Configuration for 1024x1024 (with gradient accumulation)
+
+max_epochs: 200
+learning_rate: 1e-4
+optimizer: adam
+weight_decay: 0.0
+
+# Gradient settings - accumulate for effective batch size
+gradient_clip_val: 1.0
+accumulate_grad_batches: 4  # effective batch = 4 * 4 = 16
+
+# Precision
+precision: "16-mixed"
+
+# Early stopping
+early_stopping:
+  monitor: val/dice
+  mode: max
+  patience: 30
+  min_delta: 0.001
+
+# Checkpointing
+checkpoint:
+  monitor: val/dice
+  mode: max
+  save_top_k: 3
+  save_last: true
+
+# Logging
+log_every_n_steps: 10
