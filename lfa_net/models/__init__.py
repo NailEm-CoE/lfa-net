@@ -1,11 +1,11 @@
 """LFA-Net model variants.
 
 This module provides different LFA-Net architectures:
-- LatentSkipLFANet: Latent skip connection architecture (from research/lfa_net_v3)
+- BottleneckLFABlockNet: Bottleneck architecture with latent skip connections (from research/lfa_net_v3)
 """
 
 from .latent_skip import (
-    LatentSkipLFANet,
+    BottleneckLFABlockNet,
     LFABlock,
     LFADecoder,
     LFADecoderBlock,
@@ -18,7 +18,7 @@ from .latent_skip import (
 
 __all__ = [
     # Main model
-    "LatentSkipLFANet",
+    "BottleneckLFABlockNet",
     # Encoder components
     "LFABlock",
     "LFAEncoder",

@@ -2,9 +2,9 @@
 
 Provides:
 - LFANetLightning: Original binary segmentation (backward compatible)
-- FlexibleLFANetLightning: Flexible architecture with Hydra config support
+- LFABlockNetLightning: Flexible architecture with Hydra config support
 - MulticlassLFANetLightning: Multi-class (artery/vein) segmentation
-- LatentSkipLFANetLightning: Latent skip architecture for multi-class
+- BottleneckLFABlockNetLightning: Bottleneck architecture for multi-class
 """
 
 from typing import Any, Optional
@@ -21,8 +21,8 @@ from torchmetrics.classification import (
 )
 
 from .losses import bce_dice_loss, multiclass_bce_dice_loss
-from .model import FlexibleLFANet, LFANet
-from .models import LatentSkipLFANet
+from .model import LFABlockNet, LFANet
+from .models import BottleneckLFABlockNet
 
 
 class LFANetLightning(pl.LightningModule):
@@ -30,7 +30,7 @@ class LFANetLightning(pl.LightningModule):
     PyTorch Lightning wrapper for LFA-Net.
 
     Original 3-level architecture for backward compatibility.
-    For flexible architecture, use FlexibleLFANetLightning.
+    For flexible architecture, use LFABlockNetLightning.
     """
 
     def __init__(
@@ -189,9 +189,9 @@ class LFANetLightning(pl.LightningModule):
         }
 
 
-class FlexibleLFANetLightning(pl.LightningModule):
+class LFABlockNetLightning(pl.LightningModule):
     """
-    PyTorch Lightning wrapper for FlexibleLFANet.
+    PyTorch Lightning wrapper for LFABlockNet.
 
     Supports configurable encoder depth and Hydra configuration.
     """
@@ -234,7 +234,7 @@ class FlexibleLFANetLightning(pl.LightningModule):
 
         self.log_val_image_n_epoch = log_val_image_n_epoch
 
-        self.model = FlexibleLFANet(
+        self.model = LFABlockNet(
             in_channels=in_channels,
             out_channels=out_channels,
             encoder_filters=list(encoder_filters),
@@ -252,7 +252,7 @@ class FlexibleLFANetLightning(pl.LightningModule):
         self._setup_metrics()
 
     @classmethod
-    def from_config(cls, cfg: DictConfig) -> "FlexibleLFANetLightning":
+    def from_config(cls, cfg: DictConfig) -> "LFABlockNetLightning":
         """Create instance from Hydra config."""
         return cls(
             in_channels=cfg.model.in_channels,
@@ -430,7 +430,7 @@ class MulticlassLFANetLightning(pl.LightningModule):
         self.class_names = class_names
         self.out_channels = out_channels
 
-        self.model = FlexibleLFANet(
+        self.model = LFABlockNet(
             in_channels=in_channels,
             out_channels=out_channels,
             encoder_filters=list(encoder_filters),
@@ -616,9 +616,9 @@ class MulticlassLFANetLightning(pl.LightningModule):
         }
 
 
-class LatentSkipLFANetLightning(pl.LightningModule):
+class BottleneckLFABlockNetLightning(pl.LightningModule):
     """
-    PyTorch Lightning wrapper for LatentSkipLFANet.
+    PyTorch Lightning wrapper for BottleneckLFABlockNet.
 
     Supports multi-class segmentation (artery/vein) with latent skip connections.
     """
@@ -666,7 +666,7 @@ class LatentSkipLFANetLightning(pl.LightningModule):
         self.class_names = class_names
         self.out_channels = out_channels
 
-        self.model = LatentSkipLFANet(
+        self.model = BottleneckLFABlockNet(
             in_channels=in_channels,
             out_channels=out_channels,
             encoder_channels=list(encoder_channels),
@@ -686,7 +686,7 @@ class LatentSkipLFANetLightning(pl.LightningModule):
         self._setup_metrics()
 
     @classmethod
-    def from_config(cls, cfg: DictConfig) -> "LatentSkipLFANetLightning":
+    def from_config(cls, cfg: DictConfig) -> "BottleneckLFABlockNetLightning":
         """Create instance from Hydra config."""
         class_names = list(cfg.data.get("class_names", ["artery", "vein"]))
         

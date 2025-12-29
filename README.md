@@ -16,10 +16,10 @@ pip install git+https://github.com/NailEm-CoE/lfa-net.git
 
 ```python
 import torch
-from lfa_net import LatentSkipLFANet, count_parameters
+from lfa_net import BottleneckLFABlockNet, count_parameters
 
 # Create model
-model = LatentSkipLFANet(
+model = BottleneckLFABlockNet(
     encoder_channels=[32, 48, 72, 144],
     out_channels=2,  # artery + vein
     latent_channels=8,
@@ -51,13 +51,13 @@ print(dataset)
 | Model | Description | Parameters |
 |-------|-------------|------------|
 | `LFANet` | Original architecture | ~0.1M |
-| `FlexibleLFANet` | Configurable encoder depth | 0.3-1.5M |
-| `LatentSkipLFANet` | Uniform skip projections | ~2M |
+| `LFABlockNet` | Configurable encoder depth | 0.3-1.5M |
+| `BottleneckLFABlockNet` | Uniform skip projections | ~2M |
 
 ## Training with PyTorch Lightning
 
 ```python
-from lfa_net import LatentSkipLFANetLightning
+from lfa_net import BottleneckLFABlockNetLightning
 from lfa_net.data import AVVesselDataModule
 import pytorch_lightning as pl
 
@@ -69,7 +69,7 @@ datamodule = AVVesselDataModule(
 )
 
 # Model
-model = LatentSkipLFANetLightning(
+model = BottleneckLFABlockNetLightning(
     encoder_channels=[32, 48, 72, 144],
     out_channels=2,
     learning_rate=1e-4,

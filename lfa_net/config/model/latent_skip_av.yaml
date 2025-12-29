@@ -1,11 +1,11 @@
-# LatentSkipLFANet for Artery/Vein segmentation (2-class output)
+# BottleneckLFABlockNet for Artery/Vein segmentation (2-class output)
 # Configured for 1024x1024 input with latent skip connections
 
 name: latent_skip_lfa_net
 in_channels: 3
 out_channels: 2  # artery and vein channels
 
-# Latent skip architecture (1.92M params with default)
+# Bottleneck architecture (1.92M params with default)
 encoder_channels: [32, 48, 72, 144]
 decoder_channels: null  # auto-derived from encoder
 

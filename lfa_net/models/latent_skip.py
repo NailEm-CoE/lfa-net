@@ -10,13 +10,13 @@ Architecture:
 - Decoder: LFADecoderBlocks with Skip Unprojection + RAA + Refinement
 
 Example:
-    >>> from lfa_net.models import LatentSkipLFANet
-    >>> model = LatentSkipLFANet(out_channels=1)  # Binary segmentation
+    >>> from lfa_net.models import BottleneckLFABlockNet
+    >>> model = BottleneckLFABlockNet(out_channels=1)  # Binary segmentation
     >>> x = torch.randn(1, 3, 512, 512)
     >>> pred = model(x)  # [1, 1, 512, 512]
     
     >>> # Multi-class (artery/vein)
-    >>> model = LatentSkipLFANet(out_channels=2, use_sigmoid=True)
+    >>> model = BottleneckLFABlockNet(out_channels=2, use_sigmoid=True)
 """
 
 from typing import Optional
@@ -819,8 +819,8 @@ class LFADecoder(nn.Module):
 # =============================================================================
 
 
-class LatentSkipLFANet(nn.Module):
-    """LFA-Net with Latent Skip Connections.
+class BottleneckLFABlockNet(nn.Module):
+    """LFA-Net with Latent Skip Connections (Bottleneck Architecture).
 
     All skip connections are projected to a uniform latent space
     [B, latent_ch, S, S] before the decoder.
@@ -837,7 +837,7 @@ class LatentSkipLFANet(nn.Module):
         dropout: Dropout rate
 
     Example:
-        >>> model = LatentSkipLFANet(out_channels=1)
+        >>> model = BottleneckLFABlockNet(out_channels=1)
         >>> x = torch.randn(1, 3, 512, 512)
         >>> pred = model(x)  # [1, 1, 512, 512]
     """

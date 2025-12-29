@@ -2,7 +2,7 @@
 
 This module provides both:
 - LFANet: Original 3-level architecture (backward compatible)
-- FlexibleLFANet: Configurable depth architecture (3-6 levels)
+- LFABlockNet: Configurable depth architecture (3-6 levels)
 """
 
 from typing import Optional
@@ -22,7 +22,7 @@ class LFANet(nn.Module):
     LFA-Net: Local Feature Aggregation Network for retinal vessel segmentation.
     
     This is the original 3-level architecture for backward compatibility.
-    For flexible depth, use FlexibleLFANet.
+    For flexible depth, use LFABlockNet.
     
     Architecture:
         - Encoder: 3 stages with MultiScaleConvBlock + MaxPool + BN
@@ -150,7 +150,7 @@ def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-class FlexibleLFANet(nn.Module):
+class LFABlockNet(nn.Module):
     """
     Flexible-depth LFA-Net with configurable encoder/decoder levels.
     
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print(f"  Output: {y.shape}")
     print(f"  Parameters: {count_parameters(model) / 1e6:.3f}M")
     
-    print("\nTesting FlexibleLFANet configurations:")
+    print("\nTesting LFABlockNet configurations:")
     
     configs = [
         ("Paper [8,16,32]", [8, 16, 32]),
@@ -326,7 +326,7 @@ if __name__ == "__main__":
     ]
     
     for name, filters in configs:
-        model = FlexibleLFANet(encoder_filters=filters)
+        model = LFABlockNet(encoder_filters=filters)
         x = torch.randn(1, 3, 512, 512)
         y = model(x)
         print(f"  {name}: {y.shape}, {count_parameters(model) / 1e6:.3f}M params")

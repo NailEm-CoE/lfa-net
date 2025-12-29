@@ -14,12 +14,12 @@ Example:
     >>> lit_model = LFANetLightning(learning_rate=1e-3)
     >>>
     >>> # Flexible architecture with Hydra config
-    >>> from lfa_net import FlexibleLFANet, FlexibleLFANetLightning
-    >>> model = FlexibleLFANet(encoder_filters=[16, 32, 64, 128])
+    >>> from lfa_net import LFABlockNet, LFABlockNetLightning
+    >>> model = LFABlockNet(encoder_filters=[16, 32, 64, 128])
     >>>
-    >>> # Latent skip architecture (uniform skip projections)
-    >>> from lfa_net import LatentSkipLFANet
-    >>> model = LatentSkipLFANet(encoder_channels=[32, 48, 72, 144])
+    >>> # Bottleneck architecture (uniform skip projections)
+    >>> from lfa_net import BottleneckLFABlockNet
+    >>> model = BottleneckLFABlockNet(encoder_channels=[32, 48, 72, 144])
     >>>
     >>> # Multi-class artery/vein segmentation
     >>> from lfa_net import MulticlassLFANetLightning
@@ -36,8 +36,8 @@ from .layers import (
     VisionMambaInspired,
 )
 from .lightning_module import (
-    FlexibleLFANetLightning,
-    LatentSkipLFANetLightning,
+    LFABlockNetLightning,
+    BottleneckLFABlockNetLightning,
     LFANetLightning,
     MulticlassLFANetLightning,
 )
@@ -51,20 +51,20 @@ from .losses import (
     per_class_dice,
 )
 from .metrics import get_metrics
-from .model import FlexibleLFANet, LFANet, count_parameters
-from .models import LatentSkipLFANet
+from .model import LFABlockNet, LFANet, count_parameters
+from .models import BottleneckLFABlockNet
 
 __version__ = "0.3.0"
 
 __all__ = [
     # Model
     "LFANet",
-    "FlexibleLFANet",
-    "LatentSkipLFANet",
+    "LFABlockNet",
+    "BottleneckLFABlockNet",
     "LFANetLightning",
-    "FlexibleLFANetLightning",
+    "LFABlockNetLightning",
     "MulticlassLFANetLightning",
-    "LatentSkipLFANetLightning",
+    "BottleneckLFABlockNetLightning",
     "count_parameters",
     # Layers
     "MultiScaleConvBlock",
