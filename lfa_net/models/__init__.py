@@ -27,8 +27,11 @@ from .multitask_losses import (
     MultitaskLoss,
     safe_mean,
     dice_loss_per_sample,
+    squared_dice_loss_per_sample,
     bce_loss_per_sample,
     dice_bce_loss_per_sample,
+    CupInDiscLoss,
+    VesselAVConsistencyLoss,
 )
 from .multitask_lightning import MultitaskLFANetLightning
 
@@ -56,8 +59,11 @@ __all__ = [
     "MultitaskLoss",
     "safe_mean",
     "dice_loss_per_sample",
+    "squared_dice_loss_per_sample",
     "bce_loss_per_sample",
     "dice_bce_loss_per_sample",
+    "CupInDiscLoss",
+    "VesselAVConsistencyLoss",
     # Utils
     "count_parameters",
 ]

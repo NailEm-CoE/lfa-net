@@ -244,6 +244,7 @@ class MultitaskDataModule(pl.LightningDataModule):
         train_transform: Optional training augmentation
         val_transform: Optional validation transform
         use_hub: If True, load from HuggingFace Hub instead of disk
+        shuffle_seed: Seed for shuffling datasets (0 = random seed)
     """
     
     def __init__(
@@ -255,6 +256,7 @@ class MultitaskDataModule(pl.LightningDataModule):
         train_transform: Optional[Callable] = None,
         val_transform: Optional[Callable] = None,
         use_hub: bool = True,
+        shuffle_seed: int = 0,
     ):
         super().__init__()
         self.dataset_path = dataset_path
@@ -264,6 +266,13 @@ class MultitaskDataModule(pl.LightningDataModule):
         self.train_transform = train_transform
         self.val_transform = val_transform
         self.use_hub = use_hub
+        
+        # Generate random seed if 0, otherwise use provided seed
+        if shuffle_seed == 0:
+            import random
+            self.shuffle_seed = random.randint(1, 2**31 - 1)
+        else:
+            self.shuffle_seed = shuffle_seed
         
         self.train_dataset = None
         self.val_dataset = None
@@ -281,13 +290,18 @@ class MultitaskDataModule(pl.LightningDataModule):
             ds = load_from_disk(self.dataset_path)
         
         if stage == "fit" or stage is None:
+            # Shuffle datasets once at setup with consistent seed
+            # This ensures representative samples even with limit_*_batches
+            train_ds_shuffled = ds["train"].shuffle(seed=self.shuffle_seed)
+            val_ds_shuffled = ds["val"].shuffle(seed=self.shuffle_seed)
+            
             self.train_dataset = MultitaskFundusDataset(
-                ds["train"],
+                train_ds_shuffled,
                 img_size=self.img_size,
                 transform=self.train_transform,
             )
             self.val_dataset = MultitaskFundusDataset(
-                ds["val"],
+                val_ds_shuffled,
                 img_size=self.img_size,
                 transform=self.val_transform,
             )

@@ -64,6 +64,9 @@ class MultitaskLFANetLightning(pl.LightningModule):
         seg_weights: Optional[dict[str, float]] = None,
         fovea_weight: float = 0.5,
         disease_weight: float = 0.5,
+        cup_in_disc_weight: float = 0.25,
+        vessel_av_weight: float = 0.25,
+        use_squared_dice: bool = True,
         # Training
         learning_rate: float = 1e-4,
         weight_decay: float = 1e-5,
@@ -95,6 +98,9 @@ class MultitaskLFANetLightning(pl.LightningModule):
             seg_weights=seg_weights,
             fovea_weight=fovea_weight,
             disease_weight=disease_weight,
+            cup_in_disc_weight=cup_in_disc_weight,
+            vessel_av_weight=vessel_av_weight,
+            use_squared_dice=use_squared_dice,
         )
         
         # Training config
@@ -220,6 +226,8 @@ class MultitaskLFANetLightning(pl.LightningModule):
         self.log("train/seg_loss", loss_dict["seg_loss"], on_step=True, on_epoch=True)
         self.log("train/fovea_loss", loss_dict["fovea_loss"], on_step=True, on_epoch=True)
         self.log("train/disease_loss", loss_dict["disease_loss"], on_step=True, on_epoch=True)
+        self.log("train/cup_in_disc_loss", loss_dict["cup_in_disc_loss"], on_step=True, on_epoch=True)
+        self.log("train/vessel_av_loss", loss_dict["vessel_av_loss"], on_step=True, on_epoch=True)
         
         for name in self.seg_channel_names:
             key = f"seg_{name}"
@@ -272,6 +280,8 @@ class MultitaskLFANetLightning(pl.LightningModule):
         self.log("val/seg_loss", loss_dict["seg_loss"], on_step=False, on_epoch=True)
         self.log("val/fovea_loss", loss_dict["fovea_loss"], on_step=False, on_epoch=True)
         self.log("val/disease_loss", loss_dict["disease_loss"], on_step=False, on_epoch=True)
+        self.log("val/cup_in_disc_loss", loss_dict["cup_in_disc_loss"], on_step=False, on_epoch=True)
+        self.log("val/vessel_av_loss", loss_dict["vessel_av_loss"], on_step=False, on_epoch=True)
         
         self._update_seg_metrics(
             preds["segmentation"],
