@@ -15,10 +15,28 @@ from .latent_skip import (
     SkipProjection,
     SkipUnprojection,
 )
+from .multitask import (
+    MultitaskLFANet,
+    AsinhLeakySigmoid,
+    SegmentationHead,
+    FoveaHead,
+    DiseaseHead,
+    count_parameters,
+)
+from .multitask_losses import (
+    MultitaskLoss,
+    safe_mean,
+    dice_loss_per_sample,
+    bce_loss_per_sample,
+    dice_bce_loss_per_sample,
+)
+from .multitask_lightning import MultitaskLFANetLightning
 
 __all__ = [
-    # Main model
+    # Main models
     "BottleneckLFABlockNet",
+    "MultitaskLFANet",
+    "MultitaskLFANetLightning",
     # Encoder components
     "LFABlock",
     "LFAEncoder",
@@ -29,4 +47,17 @@ __all__ = [
     "LFADecoderBlock",
     "LFADecoder",
     "SkipUnprojection",
+    # Multitask heads
+    "AsinhLeakySigmoid",
+    "SegmentationHead",
+    "FoveaHead",
+    "DiseaseHead",
+    # Multitask losses
+    "MultitaskLoss",
+    "safe_mean",
+    "dice_loss_per_sample",
+    "bce_loss_per_sample",
+    "dice_bce_loss_per_sample",
+    # Utils
+    "count_parameters",
 ]

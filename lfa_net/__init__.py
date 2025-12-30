@@ -24,6 +24,13 @@ Example:
     >>> # Multi-class artery/vein segmentation
     >>> from lfa_net import MulticlassLFANetLightning
     >>> from lfa_net.data import AVVesselDataModule
+    >>>
+    >>> # Multi-task fundus analysis (segmentation + fovea + disease)
+    >>> from lfa_net import MultitaskLFANet, MultitaskLFANetLightning
+    >>> from lfa_net.data import MultitaskDataModule
+    >>> model = MultitaskLFANet()
+    >>> out = model(torch.randn(1, 3, 512, 512))
+    >>> # out["segmentation"], out["fovea"], out["disease"]
 """
 
 from .layers import (
@@ -52,19 +59,26 @@ from .losses import (
 )
 from .metrics import get_metrics
 from .model import LFABlockNet, LFANet, count_parameters
-from .models import BottleneckLFABlockNet
+from .models import (
+    BottleneckLFABlockNet,
+    MultitaskLFANet,
+    MultitaskLFANetLightning,
+    MultitaskLoss,
+)
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     # Model
     "LFANet",
     "LFABlockNet",
     "BottleneckLFABlockNet",
+    "MultitaskLFANet",
     "LFANetLightning",
     "LFABlockNetLightning",
     "MulticlassLFANetLightning",
     "BottleneckLFABlockNetLightning",
+    "MultitaskLFANetLightning",
     "count_parameters",
     # Layers
     "MultiScaleConvBlock",
@@ -82,6 +96,8 @@ __all__ = [
     "multiclass_bce_dice_loss",
     "per_class_dice",
     "MulticlassBCEDiceLoss",
+    # Multitask
+    "MultitaskLoss",
     # Metrics
     "get_metrics",
 ]
