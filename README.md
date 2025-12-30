@@ -32,17 +32,59 @@ x = torch.randn(1, 3, 1024, 1024)
 pred = model(x)  # [1, 2, 1024, 1024]
 ```
 
+## Multi-Task Fundus Analysis
+
+```python
+from lfa_net import MultitaskLFANet, MultitaskLFANetLightning
+from lfa_net.data import MultitaskDataModule
+import pytorch_lightning as pl
+
+# Load MTL dataset from HuggingFace Hub
+datamodule = MultitaskDataModule(
+    dataset_path="kapong/mtl",
+    use_hub=True,
+    img_size=512,
+    batch_size=4,
+    shuffle_seed=42,  # 0 for random seed
+)
+
+# Create multi-task model
+model = MultitaskLFANetLightning(
+    encoder_channels=[32, 48, 72, 144],
+    fovea_weight=10.0,
+    disease_weight=1.0,
+    cup_in_disc_weight=0.25,  # Anatomical constraint
+    vessel_av_weight=0.25,    # Structural constraint
+    use_squared_dice=True,    # From LFA-Net paper
+)
+
+# Train
+trainer = pl.Trainer(max_epochs=100, accelerator="gpu")
+trainer.fit(model, datamodule)
+
+# Inference
+preds = model(batch["image"])
+# preds["segmentation"]: [B, 5, H, W] - disc, cup, artery, vein, vessel
+# preds["fovea"]: [B, 2] - (x, y) normalized coordinates
+# preds["disease"]: [B, 3] - DR, AMD, Glaucoma logits
+```
+
 ## Load Dataset
 
 ```python
 from datasets import load_dataset
 
+# Artery/Vein segmentation dataset
 dataset = load_dataset("kapong/fundus-vessel-segmentation")
-print(dataset)
+
+# Multi-task fundus analysis dataset (9,980 samples)
+mtl_dataset = load_dataset("kapong/mtl")
+print(mtl_dataset)
 # DatasetDict({
-#     'train': Dataset({num_rows: 1211}),
-#     'validation': Dataset({num_rows: 800}),
-#     'test': Dataset({num_rows: 903})
+#     'train': Dataset({num_rows: 6745}),
+#     'val': Dataset({num_rows: 1440}),
+#     'test': Dataset({num_rows: 1292}),
+#     'test_vasx': Dataset({num_rows: 503})
 # })
 ```
 
@@ -53,6 +95,7 @@ print(dataset)
 | `LFANet` | Original architecture | ~0.1M |
 | `LFABlockNet` | Configurable encoder depth | 0.3-1.5M |
 | `BottleneckLFABlockNet` | Uniform skip projections | ~2M |
+| `MultitaskLFANet` | Multi-task (seg + fovea + disease) | ~2.5M |
 
 ## Training with PyTorch Lightning
 
