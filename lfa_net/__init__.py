@@ -64,9 +64,14 @@ from .models import (
     MultitaskLFANet,
     MultitaskLFANetLightning,
     MultitaskLoss,
+    # Enhanced heads from Step 18
+    DualSegmentationHead,
+    EnhancedFoveaHead,
+    EnhancedDiseaseHead,
+    LFAFusionBlock,
 )
 
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 
 __all__ = [
     # Model
@@ -98,6 +103,11 @@ __all__ = [
     "MulticlassBCEDiceLoss",
     # Multitask
     "MultitaskLoss",
+    # Enhanced multitask heads (Step 18)
+    "DualSegmentationHead",
+    "EnhancedFoveaHead",
+    "EnhancedDiseaseHead",
+    "LFAFusionBlock",
     # Metrics
     "get_metrics",
 ]
