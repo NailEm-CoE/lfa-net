@@ -69,6 +69,10 @@ from .models import (
     EnhancedFoveaHead,
     EnhancedDiseaseHead,
     LFAFusionBlock,
+    # Fovea-related heads (predict_od_center mode)
+    FoveaRelatedHead,
+    EnhancedFoveaRelatedHead,
+    MultiScaleFeatureFusion,
 )
 
 __version__ = "0.5.0"
@@ -108,6 +112,10 @@ __all__ = [
     "EnhancedFoveaHead",
     "EnhancedDiseaseHead",
     "LFAFusionBlock",
+    # Fovea-related heads (predict_od_center mode)
+    "FoveaRelatedHead",
+    "EnhancedFoveaRelatedHead",
+    "MultiScaleFeatureFusion",
     # Metrics
     "get_metrics",
 ]

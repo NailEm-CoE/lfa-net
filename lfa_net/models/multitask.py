@@ -482,6 +482,300 @@ class EnhancedFoveaHead(nn.Module):
         return self.activation(x)
 
 
+class MultiScaleFeatureFusion(nn.Module):
+    """Fuse skip connections + bottleneck for classification/regression heads.
+    
+    Skip connections are already [B, latent_ch, skip_spatial, skip_spatial].
+    Bottleneck is pooled to same spatial size, then all concatenated.
+    LFAFusionBlock (MultiScaleConv + LiteFusion) reduces channels to out_channels.
+    
+    Args:
+        n_skip_levels: Number of encoder skip connections (default 4)
+        latent_channels: Skip connection channels (default 8)
+        bottleneck_channels: Bottleneck output channels (default 144)
+        skip_spatial: Skip connection spatial size (default 32)
+        out_channels: Output channels after fusion (default 8)
+        dropout: Dropout rate
+    """
+    
+    def __init__(
+        self,
+        n_skip_levels: int = 4,
+        latent_channels: int = 8,
+        bottleneck_channels: int = 144,
+        skip_spatial: int = 32,
+        out_channels: int = 8,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.n_skip_levels = n_skip_levels
+        self.latent_channels = latent_channels
+        self.skip_spatial = skip_spatial
+        
+        # Pool bottleneck to skip spatial size
+        self.bottleneck_pool = nn.AdaptiveAvgPool2d(skip_spatial)
+        
+        # Total input channels: skips + bottleneck
+        total_channels = n_skip_levels * latent_channels + bottleneck_channels  # 176
+        
+        # LFA fusion block
+        self.fusion = LFAFusionBlock(total_channels, out_channels, dropout=dropout)
+    
+    def forward(
+        self,
+        skips: dict[str, torch.Tensor],
+        bottleneck: torch.Tensor,
+    ) -> torch.Tensor:
+        """Fuse skip connections and bottleneck.
+        
+        Args:
+            skips: Skip connections from encoder {'level1': ..., 'level4': ...}
+            bottleneck: Bottleneck features [B, C, H, W]
+            
+        Returns:
+            Fused features [B, out_channels * skip_spatial^2]
+        """
+        # Collect skip connections
+        skip_tensors = [skips[f"level{i+1}"] for i in range(self.n_skip_levels)]
+        
+        # Pool bottleneck to skip spatial size
+        bottleneck_pooled = self.bottleneck_pool(bottleneck)
+        
+        # Concatenate all features
+        x = torch.cat(skip_tensors + [bottleneck_pooled], dim=1)  # [B, 176, 32, 32]
+        
+        # Apply fusion block
+        x = self.fusion(x)  # [B, out_channels, 32, 32]
+        
+        return x.flatten(1)  # [B, out_channels * 32 * 32]
+
+
+class FoveaRelatedHead(nn.Module):
+    """Fovea-related head for (radius, theta, side) prediction.
+    
+    Outputs: [B, 3] with (radius, theta, side).
+    - radius: Normalized distance from OD to fovea (0-1 range via sigmoid)
+    - theta: Angle in radians (raw output, not bounded)
+    - side: Binary indicator for left/right (-1/1 via tanh)
+    
+    Uses skip connections + bottleneck for multi-scale feature fusion.
+    
+    Args:
+        n_skip_levels: Number of encoder skip connections
+        latent_channels: Skip connection channels
+        bottleneck_channels: Bottleneck channels
+        skip_spatial: Skip connection spatial size
+        block_channels: Channel progression for LFA blocks
+        dropout: Dropout rate
+    """
+    
+    DEFAULT_BLOCK_CHANNELS = [64, 64, 128]
+    
+    def __init__(
+        self,
+        n_skip_levels: int = 4,
+        latent_channels: int = 8,
+        bottleneck_channels: int = 144,
+        skip_spatial: int = 32,
+        block_channels: list[int] | None = None,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.n_skip_levels = n_skip_levels
+        self.skip_spatial = skip_spatial
+        
+        # Pool bottleneck to skip spatial size
+        self.bottleneck_pool = nn.AdaptiveAvgPool2d(skip_spatial)
+        
+        # Total input channels: skips + bottleneck
+        in_channels = n_skip_levels * latent_channels + bottleneck_channels  # 176
+        
+        # LFA blocks with progressive pooling
+        channels = block_channels or self.DEFAULT_BLOCK_CHANNELS
+        pool_sizes = [16, 8, 4]  # Progressive spatial reduction
+        
+        self.blocks = nn.ModuleList()
+        for i, (out_ch, pool_sz) in enumerate(zip(channels, pool_sizes)):
+            self.blocks.append(
+                LFAClassificationBlock(in_channels, out_ch, pool_size=pool_sz, dropout=dropout)
+            )
+            in_channels = out_ch
+        
+        # Global average pooling + FC
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Linear(channels[-1], 3)  # [radius, theta, side]
+    
+    def forward(
+        self,
+        bottleneck: torch.Tensor,
+        skips: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        """Forward pass.
+        
+        Args:
+            bottleneck: Bottleneck features [B, C, H, W]
+            skips: Skip connections from encoder
+            
+        Returns:
+            Fovea-related predictions [B, 3]: (radius, theta, side)
+        """
+        # Collect skip connections
+        skip_tensors = [skips[f"level{i+1}"] for i in range(self.n_skip_levels)]
+        
+        # Pool bottleneck to skip spatial size
+        bottleneck_pooled = self.bottleneck_pool(bottleneck)
+        
+        # Concatenate all features
+        x = torch.cat(skip_tensors + [bottleneck_pooled], dim=1)  # [B, 176, 32, 32]
+        
+        # Apply LFA blocks with pooling
+        for block in self.blocks:
+            x = block(x)
+        
+        # GAP + FC
+        x = self.gap(x).flatten(1)  # [B, 128]
+        x = self.fc(x)  # [B, 3]
+        
+        # Apply activations
+        radius = torch.sigmoid(x[:, 0:1])  # [B, 1] in (0, 1)
+        theta = x[:, 1:2]                  # [B, 1] raw radians
+        side = torch.tanh(x[:, 2:3])       # [B, 1] in (-1, 1)
+        
+        return torch.cat([radius, theta, side], dim=1)  # [B, 3]
+
+
+class EnhancedFoveaRelatedHead(nn.Module):
+    """Enhanced fovea regression head with OD center prediction.
+    
+    Outputs: [B, 5] with (radius, theta, side, od_x, od_y).
+    - radius: Normalized distance from OD to fovea (0-1 range)
+    - theta: Angle in radians (-π to π)
+    - side: Binary indicator for left/right (-1/1)
+    - od_x: OD center x coordinate (normalized [0, 1])
+    - od_y: OD center y coordinate (normalized [0, 1])
+    
+    This enables fully autonomous fovea prediction without external OD detection.
+    
+    Args:
+        n_skip_levels: Number of encoder skip connections
+        latent_channels: Skip connection channels
+        bottleneck_channels: Bottleneck output channels
+        skip_spatial: Skip connection spatial size
+        block_channels: Channel progression for LFA blocks
+        dropout: Dropout rate
+    """
+    
+    DEFAULT_BLOCK_CHANNELS = [64, 64, 128]
+    
+    def __init__(
+        self,
+        n_skip_levels: int = 4,
+        latent_channels: int = 8,
+        bottleneck_channels: int = 144,
+        skip_spatial: int = 32,
+        block_channels: list[int] | None = None,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.block_channels = block_channels or self.DEFAULT_BLOCK_CHANNELS
+        
+        # Multi-scale feature fusion (shared)
+        self.fusion = MultiScaleFeatureFusion(
+            n_skip_levels=n_skip_levels,
+            latent_channels=latent_channels,
+            bottleneck_channels=bottleneck_channels,
+            skip_spatial=skip_spatial,
+            out_channels=self.block_channels[0],
+            dropout=dropout,
+        )
+        
+        # Progressive pooling with LFA blocks (shared)
+        self.blocks = nn.ModuleList()
+        in_ch = self.block_channels[0]
+        spatial = skip_spatial
+        
+        for out_ch in self.block_channels[1:]:
+            self.blocks.append(
+                LFAClassificationBlock(
+                    in_channels=in_ch,
+                    out_channels=out_ch,
+                    pool_size=spatial // 2,  # 32 → 16 → 8
+                    dropout=dropout,
+                )
+            )
+            in_ch = out_ch
+            spatial = spatial // 2
+        
+        # Final features
+        final_features = in_ch * spatial * spatial
+        
+        # Shared FC layers
+        self.shared_fc = nn.Sequential(
+            nn.Linear(final_features, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+        )
+        
+        # Separate heads
+        self.fovea_fc = nn.Sequential(
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(128, 3),  # [radius, theta, side]
+        )
+        
+        self.od_center_fc = nn.Sequential(
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(128, 2),  # [od_x, od_y]
+        )
+    
+    def forward(
+        self,
+        bottleneck: torch.Tensor,
+        skips: dict[str, torch.Tensor],
+    ) -> torch.Tensor:
+        """Forward pass.
+        
+        Args:
+            bottleneck: Bottleneck features [B, C, H, W]
+            skips: Dict of skip connections from encoder
+            
+        Returns:
+            Fovea-related predictions [B, 5]:
+                - radius: [0, 1] normalized distance
+                - theta: raw angle in radians
+                - side: [-1, 1] left/right indicator
+                - od_x: [0, 1] OD center x coordinate
+                - od_y: [0, 1] OD center y coordinate
+        """
+        # Fuse multi-scale features
+        x = self.fusion(skips, bottleneck)  # [B, features]
+        x = x.view(x.size(0), -1, self.fusion.skip_spatial, self.fusion.skip_spatial)
+        
+        # Progressive pooling
+        for block in self.blocks:
+            x = block(x)
+        
+        # Flatten and shared features
+        x = x.flatten(1)
+        shared_features = self.shared_fc(x)
+        
+        # Separate predictions
+        fovea_out = self.fovea_fc(shared_features)  # [B, 3]
+        od_out = self.od_center_fc(shared_features)   # [B, 2]
+        
+        # Apply activations
+        radius = torch.sigmoid(fovea_out[:, 0:1])      # [B, 1] in (0, 1)
+        theta = fovea_out[:, 1:2]                      # [B, 1] raw radians
+        side = torch.tanh(fovea_out[:, 2:3])           # [B, 1] in (-1, 1)
+        od_x = torch.sigmoid(od_out[:, 0:1])           # [B, 1] in (0, 1)
+        od_y = torch.sigmoid(od_out[:, 1:2])           # [B, 1] in (0, 1)
+        
+        return torch.cat([radius, theta, side, od_x, od_y], dim=1)  # [B, 5]
+
+
 class EnhancedDiseaseHead(nn.Module):
     """Enhanced disease classification head using LFA blocks with progressive pooling.
     
@@ -643,6 +937,7 @@ class MultitaskLFANet(nn.Module):
     - Enhanced fovea/disease heads: Use skip connections + bottleneck with
       LFA blocks for multi-scale feature fusion
     - Optional reconstruction head: Self-supervised RGB reconstruction
+    - Optional OD center prediction: Fully autonomous fovea localization
     
     Architecture:
         Input → Shared Encoder → Bottleneck
@@ -653,9 +948,9 @@ class MultitaskLFANet(nn.Module):
                             ↓
                     DualSegmentationHead → 5ch masks (disc, cup, artery, vein, vessel)
                             ↓
-                    EnhancedFoveaHead → (x, y) coords  [uses skips + bottleneck]
+                    FoveaHead → (x, y) or (radius, theta, side) [+ od_x, od_y]
                             ↓
-                    EnhancedDiseaseHead → N class logits  [uses skips + bottleneck]
+                    EnhancedDiseaseHead → N class logits
                             ↓
                     ReconstructionHead → RGB (optional)
     
@@ -668,20 +963,27 @@ class MultitaskLFANet(nn.Module):
         seg_out_channels: Segmentation output channels
         n_disease_classes: Number of disease classes
         head_block_channels: LFA block channels for fovea/disease heads
-        fovea_min_val: Fovea output minimum (-1 for out-of-bounds)
-        fovea_max_val: Fovea output maximum (2 for out-of-bounds)
-        fovea_leak: AsinhLeakySigmoid leak factor
+        fovea_min_val: Fovea output minimum (-1 for out-of-bounds, used when predict_od_center=False)
+        fovea_max_val: Fovea output maximum (2 for out-of-bounds, used when predict_od_center=False)
+        fovea_leak: AsinhLeakySigmoid leak factor (used when predict_od_center=False)
         dropout: Dropout rate
         use_reconstruction: Enable RGB reconstruction decoder
         use_dual_decoder: Use separate decoders for disc/cup vs vessels
+        predict_od_center: Enable OD center prediction for fovea_related output
     
     Example:
-        >>> model = MultitaskLFANet()
+        >>> model = MultitaskLFANet()  # Default: (x, y) fovea mode
         >>> x = torch.randn(2, 3, 512, 512)
         >>> out = model(x)
         >>> out["segmentation"].shape  # [2, 5, 512, 512]
-        >>> out["fovea"].shape  # [2, 2]
+        >>> out["fovea_related"].shape  # [2, 2] (x, y)
         >>> out["disease"].shape  # [2, 3]
+        
+        >>> # With OD center prediction (radius, theta, side + od_x, od_y)
+        >>> model = MultitaskLFANet(predict_od_center=True)
+        >>> out = model(x)
+        >>> out["fovea_related"].shape  # [2, 3] (radius, theta, side)
+        >>> out["od_center"].shape  # [2, 2] (od_x, od_y)
     """
     
     DEFAULT_ENCODER_CHANNELS = [32, 48, 72, 144]
@@ -705,6 +1007,7 @@ class MultitaskLFANet(nn.Module):
         dropout: float = 0.1,
         use_reconstruction: bool = False,
         use_dual_decoder: bool = True,  # Separate decoders for disc/cup vs vessels
+        predict_od_center: bool = False,  # OD center prediction (radius, theta, side + od_x, od_y)
     ):
         super().__init__()
         
@@ -716,6 +1019,7 @@ class MultitaskLFANet(nn.Module):
         self.skip_spatial = skip_spatial
         self.use_reconstruction = use_reconstruction
         self.use_dual_decoder = use_dual_decoder
+        self.predict_od_center = predict_od_center
         
         n_levels = len(self.encoder_channels)
         bottleneck_channels = self.encoder_channels[-1]
@@ -756,18 +1060,30 @@ class MultitaskLFANet(nn.Module):
                 dropout=dropout,
             )
         
-        # Enhanced fovea head with LFA blocks (progressive pooling)
-        self.fovea_head = EnhancedFoveaHead(
-            n_skip_levels=n_levels,
-            latent_channels=latent_channels,
-            bottleneck_channels=bottleneck_channels,
-            skip_spatial=skip_spatial,
-            block_channels=head_block_channels,
-            min_val=fovea_min_val,
-            max_val=fovea_max_val,
-            leak=fovea_leak,
-            dropout=dropout,
-        )
+        # Fovea head: choose based on predict_od_center
+        if predict_od_center:
+            # Enhanced head: outputs (radius, theta, side, od_x, od_y)
+            self.fovea_head = EnhancedFoveaRelatedHead(
+                n_skip_levels=n_levels,
+                latent_channels=latent_channels,
+                bottleneck_channels=bottleneck_channels,
+                skip_spatial=skip_spatial,
+                block_channels=head_block_channels,
+                dropout=dropout,
+            )
+        else:
+            # Default: outputs (x, y) coordinates
+            self.fovea_head = EnhancedFoveaHead(
+                n_skip_levels=n_levels,
+                latent_channels=latent_channels,
+                bottleneck_channels=bottleneck_channels,
+                skip_spatial=skip_spatial,
+                block_channels=head_block_channels,
+                min_val=fovea_min_val,
+                max_val=fovea_max_val,
+                leak=fovea_leak,
+                dropout=dropout,
+            )
         
         # Enhanced disease head with LFA blocks (progressive pooling)
         self.disease_head = EnhancedDiseaseHead(
@@ -804,7 +1120,8 @@ class MultitaskLFANet(nn.Module):
         Returns:
             Dict with keys:
                 - "segmentation": [B, 5, H, W] masks (logits)
-                - "fovea": [B, 2] normalized (x, y) coordinates
+                - "fovea_related": [B, 2] (x, y) or [B, 3] (radius, theta, side)
+                - "od_center": [B, 2] (od_x, od_y) if predict_od_center=True
                 - "disease": [B, N] disease logits
                 - "reconstruction": [B, 3, H, W] reconstructed RGB (if use_reconstruction=True)
         """
@@ -825,14 +1142,22 @@ class MultitaskLFANet(nn.Module):
         segmentation = self.seg_head(bottleneck, skips)  # [B, 5, H, W]
         
         # Fovea/Disease use multi-scale fusion with bottleneck + skips
-        fovea = self.fovea_head(bottleneck, skips)  # [B, 2]
+        fovea_output = self.fovea_head(bottleneck, skips)  # [B, 2] or [B, 5] if predict_od_center
         disease = self.disease_head(bottleneck, skips)  # [B, N]
         
         result = {
             "segmentation": segmentation,
-            "fovea": fovea,
             "disease": disease,
         }
+        
+        # Handle fovea output based on mode
+        if self.predict_od_center:
+            # Split into fovea_related and od_center
+            result["fovea_related"] = fovea_output[:, :3]  # [B, 3] (radius, theta, side)
+            result["od_center"] = fovea_output[:, 3:5]     # [B, 2] (od_x, od_y)
+        else:
+            # Default (x, y) mode
+            result["fovea_related"] = fovea_output  # [B, 2]
         
         # Optional: RGB reconstruction for self-supervised learning
         if self.recon_head is not None:
@@ -853,6 +1178,13 @@ class MultitaskLFANet(nn.Module):
         features, skips = self.encoder(x)
         bottleneck = self.bottleneck(features)
         return bottleneck, skips
+    
+    def freeze_encoder(self):
+        """Freeze encoder weights for transfer learning."""
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        for param in self.bottleneck.parameters():
+            param.requires_grad = False
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -863,7 +1195,7 @@ def count_parameters(model: nn.Module) -> int:
 if __name__ == "__main__":
     # Quick test
     print("=" * 50)
-    print("Testing MultitaskLFANet")
+    print("Testing MultitaskLFANet (Default xy mode)")
     print("=" * 50)
     model = MultitaskLFANet()
     print(f"Parameters: {count_parameters(model):,}")
@@ -872,10 +1204,23 @@ if __name__ == "__main__":
     out = model(x)
     
     print(f"Segmentation: {out['segmentation'].shape}")  # [2, 5, 512, 512]
-    print(f"Fovea: {out['fovea'].shape}")  # [2, 2]
+    print(f"Fovea related: {out['fovea_related'].shape}")  # [2, 2]
     print(f"Disease: {out['disease'].shape}")  # [2, 3]
-    print(f"Fovea range: [{out['fovea'].min():.3f}, {out['fovea'].max():.3f}]")
-    print(f"Has reconstruction: {'reconstruction' in out}")
+    print(f"Has od_center: {'od_center' in out}")  # False
+    print(f"Has reconstruction: {'reconstruction' in out}")  # False
+    
+    # Test with OD center prediction
+    print("\n" + "=" * 50)
+    print("Testing MultitaskLFANet (predict_od_center=True)")
+    print("=" * 50)
+    model_od = MultitaskLFANet(predict_od_center=True)
+    print(f"Parameters: {count_parameters(model_od):,}")
+    
+    out_od = model_od(x)
+    print(f"Segmentation: {out_od['segmentation'].shape}")  # [2, 5, 512, 512]
+    print(f"Fovea related: {out_od['fovea_related'].shape}")  # [2, 3]
+    print(f"OD center: {out_od['od_center'].shape}")  # [2, 2]
+    print(f"Disease: {out_od['disease'].shape}")  # [2, 3]
     
     # Test with reconstruction
     print("\n" + "=" * 50)
